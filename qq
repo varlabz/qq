@@ -1,0 +1,58 @@
+#!/bin/bash
+
+[[ $(command -v jq) ]] || { echo "jq is required but not installed. Please install it and try again."; exit 1; }
+[[ $(command -v curl) ]] || { echo "curl is required but not installed. Please install it and try again."; exit 1; }
+
+# Load environment variables from .env or/and ~/.config/qq-env
+[[ -f ~/.config/qq-env ]] && . ~/.config/qq-env 
+[[ -f ./.env ]] && . ./.env 
+
+# _message: Sends a prompt and user message to the OpenAI API and returns the response.
+# Arguments:
+#   $1 - System prompt (string)
+#   $@ - User message (string)
+# Uses environment variables: $model, $base_url, $api_key
+function _message() {
+    local prompt="$1"; shift
+    local user="$@"
+    curl -sX POST "${LLM_BASE_URL:-https://api.openai.com/v1/chat/completions}" \
+        -H "Content-Type: application/json" \
+        -H "Authorization: Bearer $LLM_API_KEY" \
+        -d "{
+            \"messages\": [
+                {
+                    \"role\": \"system\",
+                    \"content\": \"${prompt}\"
+                },
+                {
+                    \"role\": \"user\",
+                    \"content\": \"${user}\"
+                }
+            ],
+            \"stream\": false,
+            \"temperature\": ${LLM_TEMPERATURE:-0.1},
+            \"model\": \"${LLM_MODEL:-"openai/gpt-4o-mini"}\"
+        }" | jq -r '.choices[0].message.content'
+}
+
+# If last parameter is '-', read from stdin and replace it with the input
+[[ "${!#}" == "-" ]] && {
+    stdin_content=$(cat)
+    # Remove the last parameter ('-') and append stdin_content
+    set -- "${@:1:$(($#-1))}" "$stdin_content"
+}
+
+[[ $# -eq 1 ]] && {
+    _message "You are a helpful assistant." "$@"
+    exit 
+}
+
+[[ $# -gt 1 ]] && { 
+    prompt="$1"; shift
+    _message "$prompt" "$@"
+    exit
+}
+
+echo "Usage: $0 <prompt> <message> |"
+echo "       $0 <message>"
+exit 1    
