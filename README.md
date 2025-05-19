@@ -3,6 +3,7 @@
 qq is a minimal Bash script that lets you interact with OpenAI-compatible chat models from the command line. It supports both single-message and system-prompted conversations, and can read input from stdin for flexible scripting.
 
 ## Features
+
 - Send prompts and messages to OpenAI's chat/completions API (or compatible endpoints)
 - Supports system prompts and user messages
 - Reads message from stdin if last argument is `-`
@@ -22,7 +23,9 @@ qq <prompt> -    # message from stdin
 - If the last argument is `-`, the message is read from stdin.
 
 ## Environment Variables
+
 qq uses the following environment variables (set in `.env` or `~/.config/qq-env`):
+
 - `LLM_API_KEY` (required): Your OpenAI API key
 - `LLM_BASE_URL` (optional): API endpoint (default: `https://api.openai.com/v1/chat/completions`)
 - `LLM_MODEL` (optional): Model name (default: `openai/gpt-4o-mini`)
@@ -40,11 +43,13 @@ qq "$(cat prompt.txt)" - < message.txt
 ```
 
 ## Requirements
+
 - bash
 - curl
 - jq
 
 ## Installation
+
 Just copy the `qq` script somewhere in your `$PATH` and make it executable:
 
 ```bash
@@ -52,4 +57,5 @@ chmod +x qq
 ```
 
 ## License
+
 MIT
