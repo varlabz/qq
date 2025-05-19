@@ -53,6 +53,6 @@ function _message() {
     exit
 }
 
-echo "Usage: $0 <prompt> <message> |"
+echo "Usage: $0 <prompt> <message>"
 echo "       $0 <message>"
 exit 1    
