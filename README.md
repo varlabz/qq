@@ -32,6 +32,11 @@ qq uses the following environment variables (set in `.env` or `~/.config/qq-env`
 
 ```bash
 echo "Summarize this text:" | qq "You are a helpful assistant." -
+qq "You are a helpful assistant." "What is the capital of France?"
+qq "What is the capital of France?"
+qq "You are a helpful assistant." - < message.txt
+qq "$(cat prompt.txt)" "$(cat message.txt)"
+qq "$(cat prompt.txt)" - < message.txt
 ```
 
 ## Requirements
