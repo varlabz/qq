@@ -14,19 +14,13 @@
 # Uses environment variables: $model, $base_url, $api_key
 function _message() {
     local prompt="$1"; shift
-    local user="$@"
-    # user="${user//$'\n'/\\n}" 
-    # user="${user//\"/\\\"}" 
-    # user="${user//\$/\\\$}"
-    curl -sX POST "${LLM_BASE_URL:-https://api.openai.com/v1/chat/completions}" \
-        -H "Content-Type: application/json" \
-        -H "Authorization: Bearer $LLM_API_KEY" \
-        -d "$(jq -n \
-            --arg prompt "$prompt" \
-            --arg user "$user" \
-            --arg LLM_TEMPERATURE "${LLM_TEMPERATURE:-0.1}" \
-            --arg LLM_MODEL "${LLM_MODEL:-gpt-4o-mini}" \
-            '{
+    local user="$*"
+    local json_payload=$(jq -n \
+        --arg prompt "$prompt" \
+        --arg user "$user" \
+        --arg LLM_TEMPERATURE "${LLM_TEMPERATURE:-0.0}" \
+        --arg LLM_MODEL "${LLM_MODEL:-gpt-4o-mini}" \
+        '{
             "messages": [
                 {
                     "role": "system",
@@ -40,7 +34,11 @@ function _message() {
             "stream": false,
             "temperature": ($LLM_TEMPERATURE | tonumber), 
             "model": $LLM_MODEL
-        }')" | jq -r '.choices[0].message.content'
+        }')
+    curl -sX POST "${LLM_BASE_URL:-https://api.openai.com/v1/chat/completions}" \
+        -H "Content-Type: application/json" \
+        -H "Authorization: Bearer $LLM_API_KEY" \
+        -d "$json_payload" | jq -r '.choices[0].message.content'
 }
 
 # If last parameter is '-', read from stdin and replace it with the input
