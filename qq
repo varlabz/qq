@@ -7,19 +7,18 @@
 [[ -f ~/.config/qq-env ]] && . ~/.config/qq-env 
 [[ -f ./.env ]] && . ./.env 
 
-# _message: Sends a prompt and user message to the OpenAI API and returns the response.
-# Arguments:
-#   $1 - System prompt (string)
-#   $@ - User message (string)
-# Uses environment variables: $model, $base_url, $api_key
+# Check for required API key
+if [[ -z "$LLM_API_KEY" ]]; then
+    echo "LLM_API_KEY is not set. Please set it in your .env or environment." >&2
+    exit 1
+fi
+
 function _message() {
-    local prompt="$1"; shift
-    local user="$*"
     local json_payload=$(jq -n \
         --arg prompt "$prompt" \
-        --arg user "$user" \
-        --arg LLM_TEMPERATURE "${LLM_TEMPERATURE:-0.0}" \
-        --arg LLM_MODEL "${LLM_MODEL:-gpt-4o-mini}" \
+        --arg user "$user_prompt" \
+        --arg llm_temperature "${LLM_TEMPERATURE:-0.0}" \
+        --arg llm_model "${LLM_MODEL:-gpt-4o-mini}" \
         '{
             "messages": [
                 {
@@ -32,33 +31,43 @@ function _message() {
                 }
             ],
             "stream": false,
-            "temperature": ($LLM_TEMPERATURE | tonumber), 
-            "model": $LLM_MODEL
+            "temperature": ($llm_temperature | tonumber), 
+            "model": $llm_model
         }')
     curl -sX POST "${LLM_BASE_URL:-https://api.openai.com/v1/chat/completions}" \
         -H "Content-Type: application/json" \
         -H "Authorization: Bearer $LLM_API_KEY" \
-        -d "$json_payload" | jq -r '.choices[0].message.content'
+        -d "$json_payload" | jq -r '.choices[0].message.content // .error.message // "unknown error"'
 }
 
-# If last parameter is '-', read from stdin and replace it with the input
-[[ "${!#}" == "-" ]] && {
-    stdin_content=$(cat)
-    # Remove the last parameter ('-') and append stdin_content
-    set -- "${@:1:$(($#-1))}" "$stdin_content"
-}
+prompt=""
+user_prompt=""
+# If last parameter is '-', read from stdin 
+if [[ "${!#}" == "-" ]]; then
+    prompt="${*:1:$(($#-1))}"
+    if [[ -z "$prompt" ]]; then
+        prompt="You are a helpful assistant."
+    fi
+    user_prompt="$(cat)"
+    _message 
+    exit 0
+fi
 
-[[ $# -eq 1 ]] && {
-    _message "You are a helpful assistant." "$@"
-    exit 
-}
+if [[ $# -eq 1 ]]; then
+    prompt="You are a helpful assistant."
+    user_prompt="$1"
+    _message 
+    exit 0
+fi
 
-[[ $# -gt 1 ]] && { 
-    prompt="$1"; shift
-    _message "$prompt" "$@"
-    exit
-}
+if [[ $# -gt 1 ]]; then
+    prompt="$1"
+    shift
+    user_prompt="$*"
+    _message 
+    exit 0
+fi
 
 echo "Usage: $0 <prompt> <message>"
 echo "       $0 <message>"
-exit 1    
+exit 1
