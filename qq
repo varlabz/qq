@@ -15,24 +15,32 @@
 function _message() {
     local prompt="$1"; shift
     local user="$@"
+    # user="${user//$'\n'/\\n}" 
+    # user="${user//\"/\\\"}" 
+    # user="${user//\$/\\\$}"
     curl -sX POST "${LLM_BASE_URL:-https://api.openai.com/v1/chat/completions}" \
         -H "Content-Type: application/json" \
         -H "Authorization: Bearer $LLM_API_KEY" \
-        -d "{
-            \"messages\": [
+        -d "$(jq -n \
+            --arg prompt "$prompt" \
+            --arg user "$user" \
+            --arg LLM_TEMPERATURE "${LLM_TEMPERATURE:-0.1}" \
+            --arg LLM_MODEL "${LLM_MODEL:-gpt-4o-mini}" \
+            '{
+            "messages": [
                 {
-                    \"role\": \"system\",
-                    \"content\": \"${prompt}\"
+                    "role": "system",
+                    "content": $prompt
                 },
                 {
-                    \"role\": \"user\",
-                    \"content\": \"${user}\"
+                    "role": "user",
+                    "content": $user
                 }
             ],
-            \"stream\": false,
-            \"temperature\": ${LLM_TEMPERATURE:-0.1},
-            \"model\": \"${LLM_MODEL:-"openai/gpt-4o-mini"}\"
-        }" | jq -r '.choices[0].message.content'
+            "stream": false,
+            "temperature": ($LLM_TEMPERATURE | tonumber), 
+            "model": $LLM_MODEL
+        }')" | jq -r '.choices[0].message.content'
 }
 
 # If last parameter is '-', read from stdin and replace it with the input
