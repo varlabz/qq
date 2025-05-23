@@ -37,6 +37,7 @@ _message() {
                 }
             ],
             "stream": false,
+            "seed": 2025,   
             "temperature": ($llm_temperature | tonumber),
             "model": $llm_model
         }') || {
@@ -64,16 +65,18 @@ prompt="You are a helpful assistant."
 user_prompt=""
 
 # If the last parameter is '-', read the user prompt from stdin
+# example: qq "You are a helpful assistant." - < file.txt
 if [[ "${!#}" == "-" ]]; then
-    # All parameters except the last one form the system prompt
-    prompt="${*:1:$(($#-1))}"
-    [[ -z "$prompt" ]] && prompt="You are a helpful assistant."
-     user_prompt="$(cat)"
+    # All parameters the system prompt
+    prompt="$*"
+    [[ "$prompt" == "-" ]] && prompt="You are a helpful assistant."
+    user_prompt="$(cat)"
     _message
     exit 0
 fi
 
 # If there is only one argument, it's the user prompt
+# example: qq "Hello, how are you?"
 if [[ $# -eq 1 ]]; then
     user_prompt="$1"
     _message
@@ -81,6 +84,7 @@ if [[ $# -eq 1 ]]; then
 fi
 
 # If there are multiple arguments, the first is the system prompt, the rest is the user prompt
+# example: qq "You are a helpful assistant." Hello, how are you?
 if [[ $# -gt 1 ]]; then
     prompt="$1"
     shift # Remove the first argument (system prompt)
