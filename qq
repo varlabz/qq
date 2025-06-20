@@ -20,6 +20,8 @@ LLM_BASE_URL="${LLM_BASE_URL:-https://api.openai.com/v1/chat/completions}"
 
 # Function to send a message to the LLM API
 _message() {
+    local prompt="$1"
+    local user_prompt="$2"
     local json_payload=$(jq -n \
         --arg prompt "$prompt" \
         --arg user "$user_prompt" \
@@ -36,7 +38,7 @@ _message() {
                     "content": $user
                 }
             ],
-            "stream": false,
+            "stream": true,
             "seed": 2025,   
             "temperature": ($llm_temperature | tonumber),
             "model": $llm_model
@@ -45,19 +47,16 @@ _message() {
         exit 1
     }
 
-    local response=$(curl -sS -X POST "$LLM_BASE_URL" \
+    curl -sS -X POST "$LLM_BASE_URL" \
         -H "Content-Type: application/json" \
         -H "Authorization: Bearer $LLM_API_KEY" \
-        -d "$json_payload") || {
-        echo "Error: Failed to send request to LLM API." >&2
-        exit 1
-    }
-
-    # Parse and display the response
-    echo "$response" | jq -r '.choices[0].message.content // .error.message // "unknown error"' || {
-        echo "Error: Failed to parse response from LLM API." >&2
-        exit 1
-    }
+        -d "$json_payload" \
+            | sed -e '/^:/d' -e '/data: \[DONE\]/d' -e 's/^data://' \
+            | jq -rj '.choices[0]?.delta.content // .error.message // ""' || {
+            echo "Error: Failed to parse response from LLM" >&2
+            exit 1
+        }
+    echo ""
 }
 
 # Default system prompt
@@ -71,7 +70,7 @@ if [[ "${!#}" == "-" ]]; then
     prompt="$*"
     [[ "$prompt" == "-" ]] && prompt="You are a helpful assistant."
     user_prompt="$(cat)"
-    _message
+    _message "$prompt" "$user_prompt"
     exit 0
 fi
 
@@ -79,7 +78,7 @@ fi
 # example: qq "Hello, how are you?"
 if [[ $# -eq 1 ]]; then
     user_prompt="$1"
-    _message
+    _message "$prompt" "$user_prompt"
     exit 0
 fi
 
@@ -89,7 +88,7 @@ if [[ $# -gt 1 ]]; then
     prompt="$1"
     shift # Remove the first argument (system prompt)
     user_prompt="$*" # The rest of the arguments form the user prompt
-    _message
+    _message "$prompt" "$user_prompt"
     exit 0
 fi
 
