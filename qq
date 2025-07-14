@@ -1,5 +1,12 @@
 #!/bin/bash
 
+## env variables:
+# LLM_API_KEY=
+# LLM_BASE_URL=
+# LLM_MODEL=
+# LLM_TEMPERATURE=
+##
+
 command -v jq >/dev/null || { echo "Error: 'jq' is required but not installed. Please install it."; exit 1; }
 command -v curl >/dev/null || { echo "Error: 'curl' is required but not installed. Please install it."; exit 1; }
 
